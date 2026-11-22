@@ -18,6 +18,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
-      - name: Ejecutar pruebas de esquema DDL (3FN y Claves Foráneas)
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar batería de pruebas unitarias
         run: npm test
