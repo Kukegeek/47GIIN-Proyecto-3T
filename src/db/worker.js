@@ -1,15 +1,14 @@
 // Worker dedicado para SQLite sobre WebAssembly y OPFS (TTTRUCKS-20: Subtareas TTTRUCKS-21 y TTTRUCKS-22)
 import SQLiteAsyncESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
-import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
-import { MemoryAsyncVFS } from 'wa-sqlite/src/examples/MemoryAsyncVFS.js';
+import { registrarVFS } from './vfs.js';
 
 let sqlite3 = null;
 let db = null;
 let storageType = 'unknown';
 let dbName = 'tick_tock_trucks.db';
 
-// Inicializa el módulo WebAssembly y el sistema de archivos OPFS
+// Inicializa el módulo WebAssembly y el sistema de archivos OPFS con fallback en memoria
 async function inicializar(nombreBBDD = dbName) {
   if (sqlite3 && db) {
     return { ok: true, storageType, dbName };
@@ -19,22 +18,9 @@ async function inicializar(nombreBBDD = dbName) {
   const wasmModule = await SQLiteAsyncESMFactory();
   sqlite3 = SQLite.Factory(wasmModule);
 
-  // Comprueba compatibilidad con OPFS en el worker
-  if (typeof navigator !== 'undefined' && navigator.storage?.getDirectory) {
-    try {
-      const vfsOpfs = new OriginPrivateFileSystemVFS();
-      sqlite3.vfs_register(vfsOpfs, true);
-      storageType = 'OPFS';
-    } catch {
-      const vfsMem = new MemoryAsyncVFS();
-      sqlite3.vfs_register(vfsMem, true);
-      storageType = 'MemoryFallback';
-    }
-  } else {
-    const vfsMem = new MemoryAsyncVFS();
-    sqlite3.vfs_register(vfsMem, true);
-    storageType = 'MemoryFallback';
-  }
+  // Registro del sistema de archivos mediante VFS (OPFS o fallback a memoria)
+  const vfsInfo = registrarVFS(sqlite3);
+  storageType = vfsInfo.storageType;
 
   db = await sqlite3.open_v2(dbName);
   await sqlite3.exec(db, 'PRAGMA foreign_keys = ON;');
