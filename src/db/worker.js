@@ -1,4 +1,4 @@
-// Worker dedicado para SQLite sobre WebAssembly y OPFS (3T-04 Subtarea 1)
+// Worker dedicado para SQLite sobre WebAssembly y OPFS (TTTRUCKS-4 Subtarea 1)
 import SQLiteAsyncESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
 import { OriginPrivateFileSystemVFS } from 'wa-sqlite/src/examples/OriginPrivateFileSystemVFS.js';
