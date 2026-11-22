@@ -1,4 +1,4 @@
-// Cliente principal para interactuar con el Web Worker de wa-sqlite (TTTRUCKS-23)
+// Cliente principal para interactuar con el Web Worker de wa-sqlite (TTTRUCKS-23 y TTTRUCKS-24)
 
 export class SqliteClient {
   constructor(workerPath = new URL('./worker.js', import.meta.url)) {
@@ -35,7 +35,8 @@ export class SqliteClient {
   }
 
   // Arranca el worker y solicita la apertura de la base de datos (acción INIT)
-  async inicializar(dbName = 'tick_tock_trucks.db') {
+  // Opcionalmente permite realizar bootstrapping automático del esquema DDL
+  async inicializar(dbName = 'tick_tock_trucks.db', opciones = {}) {
     if (this.worker && this.estado === 'listo') {
       return this.obtenerEstado();
     }
@@ -45,6 +46,11 @@ export class SqliteClient {
 
     const res = await this._enviar('INIT', { dbName });
     this.estado = 'listo';
+
+    if (opciones.schemaSql) {
+      await this.bootstrap(opciones.schemaSql);
+    }
+
     return res;
   }
 
@@ -56,6 +62,48 @@ export class SqliteClient {
   // Ejecuta una consulta SELECT y devuelve array de filas (acción QUERY)
   async consultar(sql, params = []) {
     return this._enviar('QUERY', { sql, params });
+  }
+
+  // Ejecuta un callback dentro de una transacción atómica (BEGIN / COMMIT / ROLLBACK)
+  async transaccion(callback) {
+    if (typeof callback !== 'function') {
+      throw new Error('Se requiere una función callback para ejecutar la transacción.');
+    }
+    await this.ejecutar('BEGIN TRANSACTION;');
+    try {
+      const resultado = await callback(this);
+      await this.ejecutar('COMMIT;');
+      return resultado;
+    } catch (error) {
+      await this.ejecutar('ROLLBACK;');
+      throw error;
+    }
+  }
+
+  // Comprueba si el esquema relacional ya contiene las 15 tablas del sistema
+  async esquemaInicializado() {
+    const filas = await this.consultar(
+      "SELECT count(*) as total FROM sqlite_master WHERE type = 'table' AND name != 'sqlite_sequence';"
+    );
+    return (filas[0]?.total ?? 0) >= 15;
+  }
+
+  // Realiza el bootstrapping del esquema DDL dentro de una transacción si las tablas no existen
+  async bootstrap(ddlSql) {
+    if (!ddlSql || typeof ddlSql !== 'string') {
+      throw new Error('El script DDL es obligatorio para el bootstrapping.');
+    }
+
+    const yaExistia = await this.esquemaInicializado();
+    if (yaExistia) {
+      return { inicializado: true, yaExistia: true };
+    }
+
+    await this.transaccion(async (cliente) => {
+      await cliente.ejecutar(ddlSql);
+    });
+
+    return { inicializado: true, yaExistia: false };
   }
 
   // Devuelve el estado actual de la conexión y tipo de almacenamiento (acción STATUS)

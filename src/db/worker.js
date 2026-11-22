@@ -1,4 +1,4 @@
-// Worker dedicado para SQLite sobre WebAssembly y OPFS (TTTRUCKS-20: Subtareas TTTRUCKS-21 y TTTRUCKS-22)
+// Worker dedicado para SQLite sobre WebAssembly y OPFS (TTTRUCKS-20: Subtareas TTTRUCKS-21 a TTTRUCKS-24)
 import SQLiteAsyncESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
 import { registrarVFS } from './vfs.js';
