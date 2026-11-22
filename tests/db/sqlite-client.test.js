@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SqliteClient } from '../../src/db/sqlite-client.js';
 
-test('TTTRUCKS-4 Subtarea 1 - SqliteClient estructura y protocolo de mensajería', async (t) => {
+test('TTTRUCKS-20 Subtarea TTTRUCKS-23 - SqliteClient estructura y protocolo de mensajería', async (t) => {
   await t.test('Instanciación con valores por defecto', () => {
     const client = new SqliteClient();
     assert.equal(client.estado, 'no_iniciado');

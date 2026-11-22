@@ -1,4 +1,4 @@
-// Cliente principal para interactuar con el Web Worker de wa-sqlite (TTTRUCKS-4 Subtarea 1)
+// Cliente principal para interactuar con el Web Worker de wa-sqlite (TTTRUCKS-20: Subtarea TTTRUCKS-23)
 
 export class SqliteClient {
   constructor(workerPath = new URL('./worker.js', import.meta.url)) {
