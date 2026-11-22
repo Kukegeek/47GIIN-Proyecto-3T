@@ -1,0 +1,17 @@
+{
+  "name": "47giin-proyecto-3t",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tick Tock Trucks (3T) - Plataforma de transporte y tacógrafo Local-First",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/**/*.test.js",
+    "test:vitest": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "wa-sqlite": "^1.0.0"
+  }
+}
