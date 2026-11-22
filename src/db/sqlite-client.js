@@ -1,4 +1,4 @@
-// Cliente principal para interactuar con el Web Worker de wa-sqlite (TTTRUCKS-20: Subtarea TTTRUCKS-23)
+// Cliente principal para interactuar con el Web Worker de wa-sqlite (TTTRUCKS-23)
 
 export class SqliteClient {
   constructor(workerPath = new URL('./worker.js', import.meta.url)) {
@@ -26,13 +26,19 @@ export class SqliteClient {
     };
 
     this.worker.onerror = (err) => {
-      console.error('Error en Web Worker SQLite:', err);
+      const mensaje = err?.message || 'Error en Web Worker SQLite';
+      for (const [, resolver] of this.peticionesPendientes.entries()) {
+        resolver.reject(new Error(mensaje));
+      }
+      this.peticionesPendientes.clear();
     };
   }
 
-  // Arranca el worker y solicita la apertura de la base de datos
+  // Arranca el worker y solicita la apertura de la base de datos (acción INIT)
   async inicializar(dbName = 'tick_tock_trucks.db') {
-    if (this.worker) return this.obtenerEstado();
+    if (this.worker && this.estado === 'listo') {
+      return this.obtenerEstado();
+    }
 
     const worker = new Worker(this.workerPath, { type: 'module' });
     this._conectarWorker(worker);
@@ -42,32 +48,35 @@ export class SqliteClient {
     return res;
   }
 
-  // Ejecuta una sentencia DDL o DML sin esperar resultados tabulares
+  // Ejecuta una sentencia DDL o DML sin esperar filas (acción EXEC)
   async ejecutar(sql) {
     return this._enviar('EXEC', { sql });
   }
 
-  // Ejecuta una consulta SELECT y devuelve array de filas como objetos
+  // Ejecuta una consulta SELECT y devuelve array de filas (acción QUERY)
   async consultar(sql, params = []) {
     return this._enviar('QUERY', { sql, params });
   }
 
-  // Devuelve información del almacenamiento activo (OPFS o fallback)
+  // Devuelve el estado actual de la conexión y tipo de almacenamiento (acción STATUS)
   async obtenerEstado() {
     return this._enviar('STATUS');
   }
 
-  // Cierra el worker y limpia recursos
+  // Cierra el worker y limpia recursos rechazando peticiones pendientes
   cerrar() {
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
       this.estado = 'cerrado';
+      for (const [, resolver] of this.peticionesPendientes.entries()) {
+        resolver.reject(new Error('Cliente cerrado antes de completar la operación.'));
+      }
       this.peticionesPendientes.clear();
     }
   }
 
-  // Gestiona la mensajería asíncrona mediante promesas
+  // Envía un mensaje con ID único y devuelve una Promesa asociada
   _enviar(tipo, payload = {}) {
     return new Promise((resolve, reject) => {
       if (!this.worker) {
