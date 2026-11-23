@@ -268,3 +268,16 @@ CREATE INDEX IF NOT EXISTS idx_estacion_combustible ON estacion_serv(precio_gaso
 CREATE INDEX IF NOT EXISTS idx_repostaje_vehiculo ON repostaje(id_vehiculo, fecha_hora);
 CREATE INDEX IF NOT EXISTS idx_tacografo_usuario ON reg_tacografo(id_usuario, inicio_utc);
 CREATE INDEX IF NOT EXISTS idx_reporte_org ON reporte(id_organizacion, creado_en);
+
+-- Triggers de Inmutabilidad Estricta (TTTRUCKS-30: Subtarea TTTRUCKS-33)
+CREATE TRIGGER IF NOT EXISTS trg_inmutabilidad_update_log_auditoria
+BEFORE UPDATE ON log_auditoria
+BEGIN
+    SELECT RAISE(FAIL, '403 Forbidden: La tabla log_auditoria es estrictamente inmutable (append-only). No se permiten modificaciones.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_inmutabilidad_delete_log_auditoria
+BEFORE DELETE ON log_auditoria
+BEGIN
+    SELECT RAISE(FAIL, '403 Forbidden: La tabla log_auditoria es estrictamente inmutable (append-only). No se permite el borrado de registros.');
+END;

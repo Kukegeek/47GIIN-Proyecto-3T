@@ -111,7 +111,15 @@ export async function verificarAutorizacionSQL(db, sesion, sql) {
     return true;
   }
 
-  const { operacion, modulo } = analisis;
+  const { operacion, modulo, tabla } = analisis;
+
+  // Inmutabilidad estricta: log_auditoria jamás admite UPDATE o DELETE (TTTRUCKS-33)
+  if (tabla === 'log_auditoria' && (operacion === 'actualizar' || operacion === 'eliminar')) {
+    throw new ForbiddenError(
+      `403 Forbidden: La tabla log_auditoria es estrictamente inmutable (append-only). No se permite ${operacion} registros de auditoría.`
+    );
+  }
+
   const autorizado = await tienePermiso(db, sesion.rol, modulo, operacion);
 
   if (!autorizado) {
