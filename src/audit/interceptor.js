@@ -1,5 +1,7 @@
-// Interceptor transaccional de auditoría inmutable (TTTRUCKS-30: Subtarea TTTRUCKS-31)
+// Interceptor transaccional de auditoría inmutable (TTTRUCKS-30: Subtareas TTTRUCKS-31 y TTTRUCKS-32)
 // Garantiza el registro append-only de eventos INSERT, UPDATE, DELETE y LOGIN en log_auditoria.
+
+import { prepararEventoAuditoria } from './diff.js';
 
 export const ACCIONES_VALIDAS = Object.freeze(['INSERT', 'UPDATE', 'DELETE', 'LOGIN']);
 
@@ -112,5 +114,19 @@ export class InterceptorAuditoria {
       await InterceptorAuditoria.registrar(tx, { ...evento, id_registro: idReg }, sesion);
       return resultado;
     });
+  }
+
+  /**
+   * Registra una mutación en base de datos calculando automáticamente el diff JSON,
+   * timestamp UTC estricto y resolución del origen de sesión.
+   *
+   * @param {object} clienteSqlite - Cliente SQLite o contexto transaccional
+   * @param {object} params - { entidad, id_registro, accion, anterior, nuevo, origen_sesion }
+   * @param {object} [sesion] - Sesión del usuario actual
+   * @returns {Promise<object>} Evento registrado
+   */
+  static async registrarMutacion(clienteSqlite, params, sesion = null) {
+    const evento = prepararEventoAuditoria({ ...params, sesion });
+    return InterceptorAuditoria.registrar(clienteSqlite, evento, sesion);
   }
 }
