@@ -1,5 +1,9 @@
-// Servicio CRUD 14 para la entidad Organización (TTTRUCKS-34: Subtarea TTTRUCKS-35)
-// Gestiona el ciclo de vida fiscal, cabeceras de informes, actualización y limpieza de parámetros opcionales.
+// Servicio CRUD 14 para la entidad Organización (TTTRUCKS-34: Subtareas TTTRUCKS-35 y TTTRUCKS-37)
+// Gestiona el ciclo de vida fiscal, cabeceras de informes, actualización y trazabilidad auditada exclusiva a ROL_ADMIN.
+
+import { ForbiddenError, UnauthorizedError } from '../auth/guardias.js';
+import { InterceptorAuditoria } from '../audit/interceptor.js';
+import { validarLogotipo } from './personalizacion.js';
 
 // Helper para escapar comillas simples en sentencias SQLite
 function esc(val) {
@@ -278,4 +282,122 @@ export async function bajaLogicaOrganizacion(db, id_organizacion) {
  */
 export async function reactivarOrganizacion(db, id_organizacion) {
   return actualizarOrganizacion(db, id_organizacion, { activo: 1 });
+}
+
+/**
+ * Valida que la sesión pertenezca exclusivamente a un ROL_ADMIN para edición corporativa (TTTRUCKS-37)
+ * @param {object} sesion - Sesión activa del usuario ejecutor
+ */
+export function verificarAdminOrganizacion(sesion) {
+  if (!sesion || !sesion.id_usuario || !sesion.rol) {
+    throw new UnauthorizedError('401 Unauthorized: Debe contar con una sesión activa para gestionar la organización.');
+  }
+  if (sesion.rol !== 'ROL_ADMIN') {
+    throw new ForbiddenError('403 Forbidden: La configuración corporativa sólo puede ser editada exclusivamente por usuarios con ROL_ADMIN.');
+  }
+  return true;
+}
+
+/**
+ * CRUD 14: CREATE con trazabilidad en log_auditoria y guardia exclusiva de ROL_ADMIN (TTTRUCKS-37)
+ */
+export async function crearOrganizacionAuditada(db, sesion, datos) {
+  verificarAdminOrganizacion(sesion);
+  const nuevaOrg = await crearOrganizacion(db, datos);
+
+  await InterceptorAuditoria.registrarMutacion(
+    db,
+    {
+      accion: 'INSERT',
+      entidad: 'organizacion',
+      id_registro: nuevaOrg.id_organizacion,
+      anterior: null,
+      nuevo: nuevaOrg
+    },
+    sesion
+  );
+
+  return nuevaOrg;
+}
+
+/**
+ * CRUD 14: UPDATE con trazabilidad en log_auditoria y guardia exclusiva de ROL_ADMIN (TTTRUCKS-37)
+ */
+export async function actualizarOrganizacionAuditada(db, sesion, id_organizacion, cambios) {
+  verificarAdminOrganizacion(sesion);
+  const anterior = await obtenerOrganizacionPorId(db, id_organizacion);
+  if (!anterior) {
+    throw new Error(`Organización con ID ${id_organizacion} no encontrada.`);
+  }
+
+  const nuevo = await actualizarOrganizacion(db, id_organizacion, cambios);
+
+  await InterceptorAuditoria.registrarMutacion(
+    db,
+    {
+      accion: 'UPDATE',
+      entidad: 'organizacion',
+      id_registro: id_organizacion,
+      anterior,
+      nuevo
+    },
+    sesion
+  );
+
+  return nuevo;
+}
+
+/**
+ * CRUD 14: DELETE (restablecer opcionales) con trazabilidad en log_auditoria y guardia de ROL_ADMIN (TTTRUCKS-37)
+ */
+export async function restablecerParametrosOpcionalesAuditado(db, sesion, id_organizacion) {
+  verificarAdminOrganizacion(sesion);
+  const anterior = await obtenerOrganizacionPorId(db, id_organizacion);
+  if (!anterior) {
+    throw new Error(`Organización con ID ${id_organizacion} no encontrada.`);
+  }
+
+  const nuevo = await restablecerParametrosOpcionales(db, id_organizacion);
+
+  await InterceptorAuditoria.registrarMutacion(
+    db,
+    {
+      accion: 'UPDATE',
+      entidad: 'organizacion',
+      id_registro: id_organizacion,
+      anterior,
+      nuevo
+    },
+    sesion
+  );
+
+  return nuevo;
+}
+
+/**
+ * Gestión de logotipo con validación, trazabilidad en log_auditoria y guardia de ROL_ADMIN (TTTRUCKS-37)
+ */
+export async function asignarLogotipoAuditado(db, sesion, id_organizacion, logo) {
+  verificarAdminOrganizacion(sesion);
+  const anterior = await obtenerOrganizacionPorId(db, id_organizacion);
+  if (!anterior) {
+    throw new Error(`Organización con ID ${id_organizacion} no encontrada.`);
+  }
+
+  validarLogotipo(logo);
+  const nuevo = await actualizarOrganizacion(db, id_organizacion, { logo_url: logo.trim() });
+
+  await InterceptorAuditoria.registrarMutacion(
+    db,
+    {
+      accion: 'UPDATE',
+      entidad: 'organizacion',
+      id_registro: id_organizacion,
+      anterior,
+      nuevo
+    },
+    sesion
+  );
+
+  return nuevo;
 }

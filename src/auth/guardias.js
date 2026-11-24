@@ -120,6 +120,13 @@ export async function verificarAutorizacionSQL(db, sesion, sql) {
     );
   }
 
+  // Restricción exclusiva de edición sobre organizacion a ROL_ADMIN (TTTRUCKS-37)
+  if (tabla === 'organizacion' && operacion !== 'leer' && sesion.rol !== 'ROL_ADMIN') {
+    throw new ForbiddenError(
+      `403 Forbidden: La edición de la entidad "organizacion" está restringida exclusivamente al rol ROL_ADMIN.`
+    );
+  }
+
   const autorizado = await tienePermiso(db, sesion.rol, modulo, operacion);
 
   if (!autorizado) {
