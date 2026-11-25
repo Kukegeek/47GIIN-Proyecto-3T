@@ -209,7 +209,7 @@ export function evaluarConexionTerrestre(origen, destino) {
 
   // Rutas internas en Ceuta o Melilla
   if ((zo.zona === ZONAS_GEOGRAFICAS.CEUTA && zd.zona === ZONAS_GEOGRAFICAS.CEUTA) ||
-      (zo.zona === ZONAS_GEOGRAFICAS.MELILLA && zd.zona === ZONAS_GEOGRAFICAS.MELILLA)) {
+    (zo.zona === ZONAS_GEOGRAFICAS.MELILLA && zd.zona === ZONAS_GEOGRAFICAS.MELILLA)) {
     return {
       conexionTerrestreDirecta: true,
       requiereFerry: false,
@@ -228,7 +228,7 @@ export function evaluarConexionTerrestre(origen, destino) {
   } else if (zo.zona === ZONAS_GEOGRAFICAS.CANARIAS && zd.zona === ZONAS_GEOGRAFICAS.CANARIAS) {
     aviso = 'Conexión interinsular en Canarias: requiere transporte marítimo en ferry.';
   } else if (zd.zona === ZONAS_GEOGRAFICAS.CEUTA || zd.zona === ZONAS_GEOGRAFICAS.MELILLA ||
-             zo.zona === ZONAS_GEOGRAFICAS.CEUTA || zo.zona === ZONAS_GEOGRAFICAS.MELILLA) {
+    zo.zona === ZONAS_GEOGRAFICAS.CEUTA || zo.zona === ZONAS_GEOGRAFICAS.MELILLA) {
     aviso = 'Conexión con Ciudad Autónoma en norte de África: cruce del Estrecho en ferry.';
   }
 

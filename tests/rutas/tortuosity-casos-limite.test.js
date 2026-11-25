@@ -164,6 +164,7 @@ describe('TTTRUCKS-38 Subtarea TTTRUCKS-41 - Casos Límite: Distancias Nulas, Co
 
     it('rutas marítimas/insulares devuelven métricas intermodales y aviso de ferry sin lanzar excepciones', () => {
       // Valencia -> Palma de Mallorca (~260 km marítimos)
+      TortuosityEngine.previsualizar(VALENCIA, PALMA_MALLORCA); // Calentamiento JIT
       const res = TortuosityEngine.previsualizar(VALENCIA, PALMA_MALLORCA);
 
       assert.ok(res.distanciaGeodesicaKm >= 250 && res.distanciaGeodesicaKm <= 270);
