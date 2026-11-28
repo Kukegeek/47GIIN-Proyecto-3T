@@ -246,13 +246,19 @@ describe('TTTRUCKS-42 Subtarea TTTRUCKS-45 - Certificación Formal de Precisión
   });
 
   describe('Fase 5: Certificación de discontinuidad territorial y transporte marítimo/insular', () => {
-    it('detecta ruta península a Baleares (Valencia -> Palma de Mallorca) alertando sobre transporte marítimo', () => {
+    it('detecta ruta península a Baleares (Valencia -> Palma de Mallorca) desglosando parte terrestre, marítima (x1.03) y total', () => {
       const res = TortuosityEngine.previsualizar(VALENCIA, PALMA_MALLORCA);
 
       assert.equal(res.zonaOrigen, ZONAS_GEOGRAFICAS.PENINSULA);
       assert.equal(res.zonaDestino, ZONAS_GEOGRAFICAS.BALEARES);
       assert.equal(res.conexionTerrestreDirecta, false);
       assert.equal(res.requiereFerry, true);
+      assert.ok(res.desgloseTramos);
+      assert.equal(res.desgloseTramos.maritimo.factorTortuosidad, 1.03);
+      assert.equal(
+        Number((res.distanciaTerrestreKm + res.distanciaMaritimaKm).toFixed(2)),
+        res.distanciaEstimadaKm
+      );
       assert.ok(res.aviso && res.aviso.toLowerCase().includes('ferry'));
       assert.ok(res.tiempoCalculoMs < 1.0);
     });

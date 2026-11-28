@@ -162,19 +162,51 @@ describe('TTTRUCKS-38 Subtarea TTTRUCKS-41 - Casos Límite: Distancias Nulas, Co
       assert.equal(res.distanciaEstimadaKm, 0);
     });
 
-    it('rutas marítimas/insulares devuelven métricas intermodales y aviso de ferry sin lanzar excepciones', () => {
+    it('rutas marítimas/insulares devuelven métricas intermodales en 3 tramos (terrestre + marítimo 1.03 + terrestre) y aviso de ferry', () => {
       // Valencia -> Palma de Mallorca (~260 km marítimos)
       TortuosityEngine.previsualizar(VALENCIA, PALMA_MALLORCA); // Calentamiento JIT
       const res = TortuosityEngine.previsualizar(VALENCIA, PALMA_MALLORCA);
 
       assert.ok(res.distanciaGeodesicaKm >= 250 && res.distanciaGeodesicaKm <= 270);
       assert.ok(res.distanciaEstimadaKm > 0);
+      assert.ok(res.distanciaMaritimaKm > 0);
       assert.ok(res.duracionEstimadaSegundos > 0);
       assert.equal(res.conexionTerrestreDirecta, false);
       assert.equal(res.requiereFerry, true);
       assert.equal(res.tipoPerfil, 'INSULAR_INTERMODAL');
+      assert.ok(res.desgloseTramos);
+      assert.equal(res.desgloseTramos.maritimo.factorTortuosidad, 1.03);
+      assert.equal(
+        Number((res.distanciaTerrestreKm + res.distanciaMaritimaKm).toFixed(2)),
+        res.distanciaEstimadaKm
+      );
       assert.ok(typeof res.aviso === 'string' && res.aviso.length > 0);
       assert.ok(res.tiempoCalculoMs < 1.0, `Tiempo: ${res.tiempoCalculoMs} ms`);
+    });
+
+    it('en ruta península -> isla (Madrid -> Alcúdia) reinicia el ratio terrestre en destino independientemente del tramo origen', () => {
+      // Madrid -> Valencia (>300 km -> factor 1.26) + Ferry Valencia->Palma (1.03) + Puerto Palma -> Alcúdia (~53 km -> factor 1.32 reiniciado)
+      const res = TortuosityEngine.previsualizar(MADRID, ALCUDIA_MALLORCA);
+
+      assert.equal(res.requiereFerry, true);
+      assert.ok(res.desgloseTramos);
+
+      const { terrestreOrigen, maritimo, terrestreDestino, resumen } = res.desgloseTramos;
+      assert.ok(terrestreOrigen.distanciaKm > 350);
+      assert.equal(terrestreOrigen.factorTortuosidad, 1.26);
+      assert.equal(maritimo.factorTortuosidad, 1.03);
+      assert.ok(terrestreDestino.distanciaKm > 40 && terrestreDestino.distanciaKm < 100);
+      assert.equal(terrestreDestino.factorTortuosidad, 1.32);
+
+      // Comprobar parte terrestre + parte marítima = total ruta
+      assert.equal(
+        Number((resumen.terrestreKm + resumen.maritimaKm).toFixed(2)),
+        resumen.totalKm
+      );
+      assert.equal(resumen.terrestreKm, res.distanciaTerrestreKm);
+      assert.equal(resumen.maritimaKm, res.distanciaMaritimaKm);
+      assert.equal(resumen.totalKm, res.distanciaEstimadaKm);
+      assert.ok(res.tiempoCalculoMs < 1.0);
     });
 
     it('rutas dentro de la misma isla aplican perfil insular terrestre local sin requerir ferry', () => {
