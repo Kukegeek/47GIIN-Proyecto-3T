@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/**/*.test.js",
-    "test:vitest": "vitest run"
+    "test:vitest": "vitest run",
+    "demo:rutas-es": "node scripts/benchmark-10000-rutas-es.js",
+    "demo:rutas-es-10m": "node scripts/benchmark-10M-rutas-es.js"
   },
   "devDependencies": {
     "vitest": "^2.1.8"
